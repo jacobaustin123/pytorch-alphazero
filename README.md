@@ -1,6 +1,6 @@
-# pytorch-alpha-zero
+# PyTorch AlphaZero
 
-This repository is an implementation of the 2017 DeepMind AlphaZero paper. 
+This is a PyTorch implementation of the 2017 DeepMind paper "Mastering the game of Go without human knowledge" for TicTacToe and Othello.
 
 To Do:
 1. Implement Tic Tac Toe environment (at least sketch out the API)
@@ -14,4 +14,4 @@ not really learning, it's learning to imitate. And yes, that's something that hu
 to imitate, and then we need to improve by practicing
 
 1. learn basic concepts by imitation, including basic concepts (supervised ML and some kind of program synthesis, i.e. learning useful abstraction)
-2. learn by self-play, trial and error (RL), build up new abstractions that go further than prior techniques, or apply techniques in new ways.# pytorch-alphazero
+2. learn by self-play, trial and error (RL), build up new abstractions that go further than prior techniques, or apply techniques in new ways.
