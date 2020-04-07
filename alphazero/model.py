@@ -93,42 +93,48 @@ class GameNetwork(nn.Module):
         return self.forward(board.unsqueeze(0).permute(0, 3, 1, 2).to(torch.float))
 
     def fit(self, x, y, batch_size=32, epochs=10, shuffle=True):
+        random.shuffle(x)
+
+
         print(f"BATCH: {x.shape[0]}")
 
         policy, value = y
-        random.shuffle(x)
 
+        # if shuffle:
+        #     order = list(range(x.shape[0]))
+        #     np.random.shuffle(order)
+        #     x, policy, value = x[order], policy[order], value[order]
+        
         avg_loss = 0
         for epoch in range(epochs):
             epoch_loss = 0
             for i in range(x.shape[0] // batch_size):
-                with torch.autograd.detect_anomaly():
-                    pred_policy, pred_value = self.forward(x[batch_size * i : batch_size * (i+1)].permute(0, 3, 1, 2).to(torch.float), softmax=False)
-                    true_policy, true_value = policy[batch_size * i : batch_size * (i+1)], value[batch_size * i : batch_size * (i+1)]
+                pred_policy, pred_value = self.forward(x[batch_size * i : batch_size * (i+1)].permute(0, 3, 1, 2).to(torch.float), softmax=False)
+                true_policy, true_value = policy[batch_size * i : batch_size * (i+1)], value[batch_size * i : batch_size * (i+1)]
 
-                    log_policy = F.log_softmax(pred_policy, dim=1)
-                    value_loss = F.mse_loss(pred_value, true_value)
-                    # policy_loss = - (torch.log(pred_policy) * true_policy).sum(1).mean(0)
+                log_policy = F.log_softmax(pred_policy, dim=1)
+                value_loss = F.mse_loss(pred_value, true_value.unsqueeze(1))
+                # policy_loss = - (torch.log(pred_policy) * true_policy).sum(1).mean(0)
 
-                    if (log_policy != log_policy).any():
-                        breakpoint()
+                if (log_policy != log_policy).any():
+                    breakpoint()
 
-                    policy_loss = 5 * F.kl_div(log_policy, true_policy)
+                policy_loss = 5 * F.kl_div(log_policy, true_policy, reduction='batchmean')
 
-                    loss = value_loss + policy_loss
+                loss = value_loss + policy_loss
 
-                    if (loss != loss).any():
-                        breakpoint()
-                        
-                    self.optimizer.zero_grad()
-                    loss.backward()
+                if (loss != loss).any():
+                    breakpoint()
+                    
+                self.optimizer.zero_grad()
+                loss.backward()
 
-                    if (list(self.parameters())[0].grad != list(self.parameters())[0].grad).any():
-                        breakpoint()
+                if (list(self.parameters())[0].grad != list(self.parameters())[0].grad).any():
+                    breakpoint()
 
-                    self.optimizer.step()
+                self.optimizer.step()
 
-                    epoch_loss += loss.item()
+                epoch_loss += loss.item()
 
             epoch_loss = epoch_loss * (batch_size / x.shape[0])
             avg_loss += epoch_loss
@@ -184,7 +190,7 @@ class OthelloNetwork(GameNetwork):
         self.res3 = ResidualBlock(128)
 
         self.policy_conv = ConvLayer(128, 256, 1)
-        self.policy_fc = nn.Linear((size ** 2) * 256, (size ** 2))
+        self.policy_fc = nn.Linear((size ** 2) * 256, size ** 2 + 1) # moves plus pass
 
         self.value_conv = ConvLayer(128, 256, 1)
         self.value_fc = nn.Linear((size ** 2) * 256, 1)

@@ -36,7 +36,10 @@ class Game:
     def get_symmetries(self, board, actions):
         pass
         
-    def to_string(self, board):
+    def to_string(self, board, player=0):
+        if player == 1:
+            board = self.flip_board(board)
+            
         s = type(self).__name__ + "(["
 
         for row in range(self.board_size[0]):
@@ -55,8 +58,8 @@ class Game:
 
         return s
 
-    def display(self, board):
-        print(self.to_string(board))
+    def display(self, board, player=0):
+        print(self.to_string(board, player=player))
 
     def play(self, verbose=False):
         board = self.reset()
@@ -66,6 +69,10 @@ class Game:
         while True:
             if verbose:
                 print(f"player: {curr_player}, over: {self.ended(board)}, reward: {self.reward(board)}")
+
+                valid_moves = self.valid_moves(board)
+                moves, p = valid_moves[:-1], valid_moves[-1]
+                print("moves:", moves.view(self.board_size[0], self.board_size[1]), "pass:", p)
 
             move = int(input())
             board = self.move(board, move)

@@ -1,9 +1,9 @@
 import torch
 import numpy as np
 
-from model import TicTacToeNetwork, OthelloNetwork
-from tictactoe import TicTacToe
-from othello import Othello
+from alphazero.model import TicTacToeNetwork, OthelloNetwork
+from alphazero.tictactoe import TicTacToe
+from alphazero.othello import Othello
 
 CPUCT = 1.0
 
@@ -12,6 +12,7 @@ class MCTS:
         self.P = dict() # array of base probabilities for edge action pair returned by neural net
         self.Q = dict() # value of (s, a) pair
         self.N = dict() # number of times (s, a) pair has been visited
+        self.V = dict() # valid actions in state s, basically a cache
         self.terminal = dict() 
 
         self.game = game
@@ -55,8 +56,8 @@ class MCTS:
 
             valid_moves = self.game.valid_moves(state).to(torch.float)
 
-            if valid_moves.sum() == 0:
-                raise AssertionError("No valid moves were found.")
+            if valid_moves.sum() == 0: # should always be at least one valid move, even if it's passing
+                raise AssertionError("No valid moves found.")
 
             self.P[s] = valid_moves * action_prob
 
@@ -65,9 +66,11 @@ class MCTS:
                 self.P[s] = valid_moves.reshape(1, -1)
 
             self.P[s] = self.P[s] / self.P[s].sum()
+            self.V[s] = valid_moves
             return -value
         else:
-            valid_actions = self.game.valid_moves(state)
+            valid_actions = self.V[s]
+
             qs = torch.tensor([self.Q.get((s, a), 0) for a in range(self.game.action_size())]).to(torch.float)
             ns = torch.tensor([self.N.get((s, a), 0) for a in range(self.game.action_size())]).to(torch.float)
             us = CPUCT * self.P[s] * torch.sqrt(ns.sum() + 1e-8) / (1 + ns)
@@ -108,10 +111,10 @@ if __name__ == "__main__":
     # network = TicTacToeNetwork(3)
     
     game = Othello()
-    network = OthelloNetwork(8)
+    network = OthelloNetwork(8).to('cuda:0')
 
     board = game.reset()
-    mcts = MCTS(game, network)
+    mcts = MCTS(game, network, device='cuda:0')
 
     mcts.search(board)
     print(mcts.get_action_prob(board))

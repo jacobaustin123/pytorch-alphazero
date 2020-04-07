@@ -4,7 +4,7 @@ import torchvision
 import random
 import numpy as np
 
-from game import Game
+from alphazero.game import Game
 
 class TicTacToe(Game):
     def __init__(self, size=3):
@@ -19,9 +19,9 @@ class TicTacToe(Game):
         winner = self.winner(board)
         
         if winner[0]:
-            return 1
+            return 1.
         elif winner[1]:
-            return -1
+            return -1.
         elif self.valid_moves(board).sum() == 0:
             return 0.1
         else:
