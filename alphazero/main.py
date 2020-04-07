@@ -29,8 +29,9 @@ parser = argparse.ArgumentParser(
     Go without human knowledge" for TicTacToe and Othello'
 )
 
-NUM_ITER = 100
+NUM_ITER = 20
 NUM_EPISODES = 25
+NUM_SELF_PLAY = 20
 BATCH_SIZE = 64
 TRAIN_EPOCHS = 10
 MAX_TRAIN_SIZE = 20
@@ -65,30 +66,35 @@ class Arena:
         else:
             return None
 
-    def _play_game(self):
+    def _play_game(self, verbose=False):
         board = self.game.reset()
 
         while True:
             action = self.player1(board)
             board = self.game.move(board, action)
+
+            if verbose: self.game.display(board, player=0)
             winner = self.check_winner(board, 0)
             if winner is not None:
+                print(winner)
                 return winner
 
             board = self.game.flip_board(board)
             
             action = self.player2(board)
             board = self.game.move(board, action)
+            if verbose: self.game.display(board, player=1)
             winner = self.check_winner(board, 1)
             if winner is not None:
+                print(winner)
                 return winner
 
             board = self.game.flip_board(board)
 
-    def play(self, N=40):
+    def play(self, N=40, verbose=False):
         wins, draws, losses = 0, 0, 0
         for _ in range(int(N / 2)):
-            n_wins, n_draws, n_losses = self._play_game()
+            n_wins, n_draws, n_losses = self._play_game(verbose=verbose)
             wins += n_wins
             draws += n_draws
             losses += n_losses
@@ -96,7 +102,7 @@ class Arena:
         self.player1, self.player2 = self.player2, self.player1
 
         for _ in range(int(N / 2)):
-            n_wins, n_draws, n_losses = self._play_game()
+            n_wins, n_draws, n_losses = self._play_game(verbose=verbose)
             losses += n_wins
             draws += n_draws
             wins += n_losses
@@ -158,6 +164,9 @@ class Train:
             episode_step += 1
 
     def play(self):
+        """
+        play a game against a human player using keyboard input.
+        """
         self.network.eval()
 
         board = self.game.reset()
@@ -207,6 +216,10 @@ class Train:
             board = self.game.flip_board(board)
 
     def learn(self):
+        """
+        train the network on self-play games.
+        """
+
         self.network.train()
         
         train_examples = []
@@ -248,7 +261,7 @@ class Train:
                 self.game
             )
 
-            wins, draws, losses = arena.play(40)
+            wins, draws, losses = arena.play(NUM_SELF_PLAY, verbose=False)
             print(f"New network achieves {wins} wins, {draws} draws, and {losses} losses over the previous iteration.")
             if wins + losses == 0 or wins / (wins + losses) < UPDATE_THRESHOLD: # failed to win enough
                 self.network.load_state_dict(self.competitor.state_dict()) # reject, network reverts
@@ -271,43 +284,43 @@ class Train:
         for file in os.listdir(path):
             file = os.path.join(path, file)
             if file.endswith(".pt"):
-                try:        
+                try:
                     competitor_state_dict = torch.load(file)
-                    competitor.load_state_dict(competitor_state_dict)
+                    incompatible_keys = competitor.load_state_dict(competitor_state_dict)
                 except:
                     print(f"Unable to load state dict for {file}")
                     continue
 
-            current_mcts = MCTS(self.game, self.network, device=self.device, verbose=self.verbose)
-            competitor_mcts = MCTS(self.game, competitor, device=self.device, verbose=self.verbose)
+                current_mcts = MCTS(self.game, self.network, device=self.device, verbose=self.verbose)
+                competitor_mcts = MCTS(self.game, competitor, device=self.device, verbose=self.verbose)
 
-            arena = Arena(
-                lambda board : current_mcts.get_action_prob(board, steps=NUM_MCTS_STEPS, temp=0).argmax(),
-                lambda board : competitor_mcts.get_action_prob(board, steps=NUM_MCTS_STEPS, temp=0).argmax(),
-                self.game
-            )
+                arena = Arena(
+                    lambda board : current_mcts.get_action_prob(board, steps=NUM_MCTS_STEPS, temp=0).argmax(),
+                    lambda board : competitor_mcts.get_action_prob(board, steps=NUM_MCTS_STEPS, temp=0).argmax(),
+                    self.game
+                )
 
-            wins, draws, losses = arena.play(20)
-            print(f"Current network achieves {wins} wins, {draws} draws, and {losses} losses over {file}")
+                wins, draws, losses = arena.play(20)
+                print(f"Current network achieves {wins} wins, {draws} draws, and {losses} losses over {file}")
 
 if __name__ == "__main__":
-    # game = TicTacToe(size=3)
-    # net = TicTacToeNetwork(3)
+    game = TicTacToe(size=3)
+    net = TicTacToeNetwork(3)
+    net.load_state_dict(torch.load("backups/network-10.pt"))
 
-    game = Othello(size=4)
-    net = OthelloNetwork(size=4)
+    # game = Othello(size=4)
+    # net = OthelloNetwork(size=4)
     # net.load_state_dict(torch.load("backups/othello-4/network-60.pt"))
 
-    train = Train(game, net, device='cuda:0', verbose=False)
-    episodes = train.episode(symmetries=False)
+    train = Train(game, net, device='cuda:0', verbose=True)
+    episodes = train.episode(symmetries=True)
 
-    curr_player = 0
+    # curr_player = 0
     for board, policy, reward in episodes:
-        game.display(board, player=curr_player)
-        print(f"reward: {reward}, policy: {policy}, player: {curr_player}")
-        curr_player = 1 -curr_player
+        game.display(board)
+        print(f"reward: {reward}, policy: {policy}")
+        # curr_player = 1 -curr_player
 
-    
     # train.compare("backups")
     # train.learn()
     # train.play()

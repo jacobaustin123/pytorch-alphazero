@@ -32,6 +32,30 @@ class TestOthello:
         assert game.ended(board)
         assert reward == 1
 
+    def test_sequence_2(self):
+        board = game.reset()
+        moves = [14, 15, 11, 13, 0, 3, 7, 1, 2, 16, 12, 4, 8]
+
+        curr_player = 0
+        for move in moves[:-1]:
+            valid_moves = game.valid_moves(board)
+            assert valid_moves[move]
+            board = game.move(board, move)
+            assert not game.ended(board)
+            assert game.reward(board) == 0
+
+            game.display(board, player=curr_player)
+            
+            board = game.flip_board(board)
+            curr_player = 1 - curr_player
+        
+        assert curr_player == 0
+        board = game.move(board, moves[-1])
+        game.display(board, player=curr_player)
+        reward = game.reward(board)
+        assert game.ended(board)
+        assert reward == 1
+
     def test_valid(self):
         board = game.reset()
         valid_moves = game.valid_moves(board)

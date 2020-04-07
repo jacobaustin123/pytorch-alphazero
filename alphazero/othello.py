@@ -140,7 +140,7 @@ class Othello(Game):
 
         return None
 
-    def place(self, board, x, y):
+    def _place(self, board, x, y):
         if board[x, y].any():
             raise ValueError("Cannot place a token in a filled position")
 
@@ -176,26 +176,26 @@ class Othello(Game):
 
         move = self.xy_from_code(code)
 
-        if move == None:
+        if move == None: # pass
             return board.clone()
 
         x, y = move
-        return self.place(board.clone(), x, y)
+        return self._place(board.clone(), x, y)
         
     def move_xy(self, board, x, y):
         if self.ended(board):
             raise ValueError("Cannot move after the game has been finished")
 
-        return self.place(board.clone(), x, y)
+        return self._place(board.clone(), x, y)
 
     def get_symmetries(self, board, actions):
         rotations = []
-        actions, p = actions[:-1].reshape(self.board_size[0], self.board_size[1]), actions[-1]
+        non_pass_actions, p = actions[:-1].reshape(self.board_size[0], self.board_size[1]), actions[-1]
 
         for k in range(0, 4):
             for flip in [True, False]:
                 new_board = np.rot90(board, k)
-                new_actions = np.rot90(actions, k)
+                new_actions = np.rot90(non_pass_actions, k)
 
                 if flip:
                     new_board = np.fliplr(new_board)

@@ -93,17 +93,13 @@ class GameNetwork(nn.Module):
         return self.forward(board.unsqueeze(0).permute(0, 3, 1, 2).to(torch.float))
 
     def fit(self, x, y, batch_size=32, epochs=10, shuffle=True):
-        random.shuffle(x)
-
-
         print(f"BATCH: {x.shape[0]}")
 
         policy, value = y
-
-        # if shuffle:
-        #     order = list(range(x.shape[0]))
-        #     np.random.shuffle(order)
-        #     x, policy, value = x[order], policy[order], value[order]
+        if shuffle:
+            order = list(range(x.shape[0]))
+            np.random.shuffle(order)
+            x, policy, value = x[order], policy[order], value[order]
         
         avg_loss = 0
         for epoch in range(epochs):
@@ -116,20 +112,20 @@ class GameNetwork(nn.Module):
                 value_loss = F.mse_loss(pred_value, true_value.unsqueeze(1))
                 # policy_loss = - (torch.log(pred_policy) * true_policy).sum(1).mean(0)
 
-                if (log_policy != log_policy).any():
+                if (log_policy != log_policy).any(): # check for nan
                     breakpoint()
 
                 policy_loss = 5 * F.kl_div(log_policy, true_policy, reduction='batchmean')
 
                 loss = value_loss + policy_loss
 
-                if (loss != loss).any():
+                if (loss != loss).any(): # check for nan
                     breakpoint()
                     
                 self.optimizer.zero_grad()
                 loss.backward()
 
-                if (list(self.parameters())[0].grad != list(self.parameters())[0].grad).any():
+                if (list(self.parameters())[0].grad != list(self.parameters())[0].grad).any(): # check for nan
                     breakpoint()
 
                 self.optimizer.step()

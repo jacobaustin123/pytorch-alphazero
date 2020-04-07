@@ -7,7 +7,6 @@ from alphazero import tictactoe
 def game(request):
     return request.param
 
-
 class TestGames:
     @pytest.mark.xfail()
     def test_place(self, game):
