@@ -94,8 +94,10 @@ class GameNetwork(nn.Module):
 
     def fit(self, x, y, batch_size=32, epochs=10, shuffle=True):
         print(f"BATCH: {x.shape[0]}")
-
         policy, value = y
+
+        assert x.shape[0] == policy.shape[0] == value.shape[0]
+
         if shuffle:
             order = list(range(x.shape[0]))
             np.random.shuffle(order)
@@ -108,6 +110,7 @@ class GameNetwork(nn.Module):
                 pred_policy, pred_value = self.forward(x[batch_size * i : batch_size * (i+1)].permute(0, 3, 1, 2).to(torch.float), softmax=False)
                 true_policy, true_value = policy[batch_size * i : batch_size * (i+1)], value[batch_size * i : batch_size * (i+1)]
 
+                
                 log_policy = F.log_softmax(pred_policy, dim=1)
                 value_loss = F.mse_loss(pred_value, true_value.unsqueeze(1))
                 # policy_loss = - (torch.log(pred_policy) * true_policy).sum(1).mean(0)
@@ -139,7 +142,7 @@ class GameNetwork(nn.Module):
         avg_loss /= epochs
         print("Average loss:", avg_loss)
 
-        print(f"pred_policy: {pred_policy[0]}, pred_value: {pred_value[0]}, true_policy: {true_policy[0]}, true_value: {true_value[0]}")
+        print(f"log_policy: {log_policy[0]}, pred_value: {pred_value[0]}, true_policy: {true_policy[0]}, true_value: {true_value[0]}")
 
         return self
 

@@ -42,6 +42,9 @@ class MCTS:
     def search(self, state):
         s = self.game.to_string(state)
 
+        if self.verbose: 
+            print("-----------\n" + s + "\n-----------")
+
         if s in self.terminal:
             value = self.terminal[s]
             return -value
@@ -51,7 +54,7 @@ class MCTS:
                 self.terminal[s] = self.game.reward(state)
                 return -self.terminal[s]
 
-            action_prob, value = self.network(state.unsqueeze(0).permute(0, 3, 1, 2).to(torch.float32).to(self.device))
+            action_prob, value = self.network(self.game.tensor(state).unsqueeze(0).permute(0, 3, 1, 2).to(torch.float32).to(self.device))
             action_prob, value = action_prob.detach().cpu(), value.item()
 
             valid_moves = self.game.valid_moves(state).to(torch.float)
@@ -69,8 +72,7 @@ class MCTS:
             self.V[s] = valid_moves
             return -value
         else:
-            valid_actions = self.V[s]
-
+            valid_actions = self.V[s] # caching, doesn't work with openspiel
             qs = torch.tensor([self.Q.get((s, a), 0) for a in range(self.game.action_size())]).to(torch.float)
             ns = torch.tensor([self.N.get((s, a), 0) for a in range(self.game.action_size())]).to(torch.float)
             us = CPUCT * self.P[s] * torch.sqrt(ns.sum() + 1e-8) / (1 + ns)

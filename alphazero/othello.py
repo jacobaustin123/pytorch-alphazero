@@ -57,7 +57,7 @@ class Othello(Game):
         elif winner == 1:
             return -1. # loss
         else:
-            return 0.1 # tie
+            return 1e-4 # tie
 
     def ended(self, board):
         return not self._valid_moves_no_passing(board).any() and \
@@ -160,13 +160,14 @@ class Othello(Game):
                 elif direction == "right":
                     self.swap(board, x, range(y+1, y+steps+1))
                 elif direction == "up-right":
-                    self.swap(board, range(x-steps, x), range(y+1, y+1+steps))
+                    self.swap(board, range(x-steps, x), range( y+steps, y, -1))
                 elif direction == "up-left":
                     self.swap(board, range(x-steps, x), range(y-steps, y))
                 elif direction == "down-right":
                     self.swap(board, range(x+1, x+1+steps), range(y+1, y+1+steps))
                 elif direction == "down-left":
-                    self.swap(board, range(x+1, x+1+steps), range(y-steps, y))
+                    print("down-left", list(range(x+steps, x, -1)), list(range(y-steps, y)))
+                    self.swap(board, range(x+steps, x, -1), range(y-steps, y))
 
         return board
 
@@ -207,6 +208,6 @@ class Othello(Game):
         return rotations
         
 if __name__ == "__main__":
-    game = Othello(size=4)
+    game = Othello(size=8)
     game.play(verbose=True)
     moves = [1, 12, 14, 13, 0, 4, 8, 11, 15, 7]

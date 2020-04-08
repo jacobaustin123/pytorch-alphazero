@@ -23,7 +23,7 @@ class TicTacToe(Game):
         elif winner[1]:
             return -1.
         elif self.valid_moves(board).sum() == 0:
-            return 0.1
+            return 1e-4
         else:
             return 0
 
@@ -63,7 +63,9 @@ class TicTacToe(Game):
         if board[x, y].any():
             raise ValueError("Cannot place a token in a filled position")
 
+        board = board.clone()
         board[x, y, 0] = True
+        return board
 
     def get_symmetries(self, board, actions):
         rotations = []
@@ -96,7 +98,7 @@ if __name__ == "__main__":
     states = []
     board = game.reset()
     for move in moves:
-        game.move_xy(board, move[0], move[1])
+        board = game.move_xy(board, move[0], move[1])
         game.display(board)
         print(game.valid_moves(board))
 

@@ -61,6 +61,9 @@ class Game:
     def display(self, board, player=0):
         print(self.to_string(board, player=player))
 
+    def tensor(self, board): # for compatibility with openspiel
+        return board
+
     def play(self, verbose=False):
         board = self.reset()
         self.display(board)
@@ -71,8 +74,12 @@ class Game:
                 print(f"player: {curr_player}, over: {self.ended(board)}, reward: {self.reward(board)}")
 
                 valid_moves = self.valid_moves(board)
-                moves, p = valid_moves[:-1], valid_moves[-1]
-                print("moves:", moves.view(self.board_size[0], self.board_size[1]), "pass:", p)
+
+                if valid_moves.shape[0] == self.board_size[0] * self.board_size[1]:
+                    print("moves:", valid_moves.view(self.board_size[0], self.board_size[1]))
+                else:
+                    moves, p = valid_moves[:-1], valid_moves[-1]
+                    print("moves:", moves.view(self.board_size[0], self.board_size[1]), "pass:", p)
 
             move = int(input())
             board = self.move(board, move)
