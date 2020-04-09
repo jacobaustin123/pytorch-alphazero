@@ -14,7 +14,7 @@ class Wrapper(Game):
     def action_size(self):
         return self.game.num_distinct_actions()
 
-    def reward(self, board):        
+    def reward(self, board, player):        
         if not board.is_terminal():
             return 0
 
@@ -23,7 +23,7 @@ class Wrapper(Game):
         if reward[0] == 0 and reward[1] == 0: # tie
             return 1e-4
 
-        return reward[0] * (-1) ** (board.current_player() != 1)
+        return reward[0] * (-1) ** (player == 1)
 
     def ended(self, board):
         return board.is_terminal()
@@ -44,15 +44,11 @@ class Wrapper(Game):
         return board
 
     def tensor(self, board):
-        obs_tensor = torch.tensor(board.observation_tensor(), dtype=torch.uint8)
-        player = board.current_player()
-
+        obs_tensor = torch.tensor(board.observation_tensor(board.current_player()), dtype=torch.uint8)
         size = self.action_size() - 1
         side = int(np.sqrt(size))
-        if player == 1:
-            return torch.stack([obs_tensor[2 * size:], obs_tensor[size : 2 * size]]).permute(1, 0).reshape(side, side, 2).to(torch.uint8)
-        else:
-            return torch.stack([obs_tensor[size : 2 * size], obs_tensor[2 * size:]]).permute(1, 0).reshape(side, side, 2).to(torch.uint8)
+        
+        return torch.stack([obs_tensor[size : 2 * size], obs_tensor[2 * size:]]).permute(1, 0).reshape(side, side, 2).to(torch.uint8)
 
     def get_symmetries(self, board, actions):
         rotations = []
@@ -73,12 +69,11 @@ class Wrapper(Game):
 
         return rotations
 
-    def to_string(self, board, player=0):
-        if (player == 0 and board.current_player() == 1) or (board.current_player() == 0 and player == 1):
-            return board.observation_string().replace('o', 'e').replace('x', 'o').replace('e', 'x')
-        else:
-            return board.observation_string()
+    def to_string(self, board, player=None):
+        if player == None:
+            player = board.current_player()
 
+        return board.observation_string(player)
 
     def display(self, board, player=0):
         print(board)
@@ -110,7 +105,7 @@ class Wrapper(Game):
 
 if __name__ == "__main__":
     print("USING XY:")
-    game = SpielTicTacToe()
+    game = Wrapper(game="tic_tac_toe")
     moves = [
         0,
         1,

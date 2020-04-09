@@ -46,18 +46,20 @@ class Othello(Game):
         else:
             return None
 
-    def reward(self, board):
+    def reward(self, board, player=None):
         if not self.ended(board):
             return 0
 
         winner = self.winner(board)
         
-        if winner == 0:
+        if winner is None:
+            return 1e-4
+        elif winner == 0:
             return 1. # win
         elif winner == 1:
             return -1. # loss
         else:
-            return 1e-4 # tie
+            ValueError("Invalid reward found")
 
     def ended(self, board):
         return not self._valid_moves_no_passing(board).any() and \

@@ -15,7 +15,7 @@ class TicTacToe(Game):
             board[range(self.board_size[0]), range(self.board_size[1])].all(0) |
             board[range(self.board_size[0]), range(self.board_size[1]-1, -1, -1)].all(0))
 
-    def reward(self, board):
+    def reward(self, board, player=None):
         winner = self.winner(board)
         
         if winner[0]:

@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import argparse
 
+from natsort import natsorted
 import multiprocessing
 import os
 
@@ -42,17 +43,11 @@ class Arena:
         self.game = game
 
     def check_winner(self, board, player):
-        reward = self.game.reward(board)
+        reward = self.game.reward(board, player=player)
         if reward == 1:
-            if player == 0:
-                return 1, 0, 0
-            else:
-                return 0, 0, 1
+            return 1, 0, 0
         elif reward == -1:
-            if player == 0:
-                return 0, 0, 1
-            else:
-                return 1, 0, 0
+            return 0, 0, 1
         elif self.game.ended(board):
             return 0, 1, 0
         else:
@@ -74,8 +69,8 @@ class Arena:
             
             action = self.player2(board)
             board = self.game.move(board, action)
-            if verbose: self.game.display(board, player=1)
-            winner = self.check_winner(board, 1)
+            if verbose: self.game.display(board, player=0)
+            winner = self.check_winner(board, 0)
             if winner is not None:
                 return winner
 
@@ -116,6 +111,7 @@ class Train:
         self.game = game
         self.network = network.to(self.device)
         self.competitor = self.network.clone().to(self.device)
+        self.competitor.load_state_dict(self.network.state_dict())
 
         self.verbose = verbose
 
@@ -152,7 +148,7 @@ class Train:
                     self.game.display(self.game.flip_board(board))
             
             if game.ended(board):
-                reward = self.game.reward(board)
+                reward = self.game.reward(board, player=curr_player)
                 if self.verbose: print(f"Reward: {reward}, Player: {curr_player}")
                 return [(board, pi, reward * (-1) ** (curr_player != past_player)) for (board, pi, past_player) in examples]
 
@@ -174,7 +170,7 @@ class Train:
             board = self.game.move(board, action)
             self.game.display(board)
 
-            reward = self.game.reward(board)
+            reward = self.game.reward(board, player=0)
 
             if reward == 1:
                 print(f"You win!")
@@ -198,7 +194,7 @@ class Train:
 
             self.game.display(self.game.flip_board(board))
 
-            reward = self.game.reward(board)
+            reward = self.game.reward(board, player=1)
 
             if reward == 1:
                 print(f"The computer win!")
@@ -215,7 +211,10 @@ class Train:
     def launch_arena(self, player2='random', N=20, verbose=False):
         if player2 == 'random':
             player2 = lambda board : np.random.choice(np.where(self.game.valid_moves(board) != 0)[0])
-        
+        elif player2 == 'self':
+            competitor_mcts = MCTS(self.game, self.network, device=self.device, verbose=self.verbose)
+            player2 = lambda board : current_mcts.get_action_prob(board, steps=NUM_MCTS_STEPS, temp=0).argmax()
+            
         if isinstance(player2, str):
             raise TypeError("other values for player2 not supported")
 
@@ -293,9 +292,6 @@ class Train:
             self.network.fit(data.to(self.device), [policy.to(self.device), values.to(self.device)], batch_size=BATCH_SIZE, epochs=TRAIN_EPOCHS, shuffle=False)
 
             self.network.eval()
-
-            if epoch == 0:
-                self.competitor.load_state_dict(self.network.state_dict())
             
             current_mcts = MCTS(self.game, self.network, device=self.device, verbose=self.verbose)
             competitor_mcts = MCTS(self.game, self.competitor, device=self.device, verbose=self.verbose)
@@ -328,7 +324,7 @@ class Train:
         """
         competitor = self.network.clone().to(self.device)
 
-        for file in os.listdir(path):
+        for file in natsorted(os.listdir(path))[-2:]:
             file = os.path.join(path, file)
             if file.endswith(".pt"):
                 try:
@@ -364,8 +360,9 @@ if __name__ == "__main__":
 
     game = Wrapper(game='othello')
     net = OthelloNetwork(8)
+    net.load_state_dict(torch.load("backups/network-130.pt"))
     train = Train(game, net, device='cuda:0', verbose=False)
-    # episodes = train.episode(symmetries=True)
+    # episodes = train.episode(symmetries=False)
 
     # curr_player = 0
     # for board, policy, reward in episodes:
@@ -374,6 +371,6 @@ if __name__ == "__main__":
     #     curr_player = 1 -curr_player
 
     # train.compare("backups")
-    train.learn()
-    train.play()
-    # train.launch_arena(player2='random', verbose=True)
+    #train.learn()
+    #train.play()
+    train.launch_arena(player2='self', verbose=True)

@@ -10,6 +10,5 @@ setup(
        "pytest",
        "torch",
        "numpy",
-       
    ],
 )

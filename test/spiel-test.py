@@ -10,12 +10,13 @@ print(state.legal_actions())
 
 while not state.is_terminal():
     moves = state.legal_actions()
+    player = state.current_player()
     state.apply_action(np.random.choice(moves))
     print(moves)
-    print(state.current_player())
     print(state)
 
 print(state.is_terminal())
 print(state.rewards())
-print(sum(state.observation_tensor()[64:128]))
-print(sum(state.observation_tensor()[128:]))
+print("last player:", player)
+print(sum(state.observation_tensor(0)[64:128]))
+print(sum(state.observation_tensor(0)[128:]))

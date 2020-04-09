@@ -44,16 +44,9 @@ class MCTS:
 
         if self.verbose: 
             print("-----------\n" + s + "\n-----------")
-
-        if s in self.terminal:
-            value = self.terminal[s]
-            return -value
+            print(f"To move: {state.current_player()}")
 
         if s not in self.P:
-            if self.game.ended(state):
-                self.terminal[s] = self.game.reward(state)
-                return -self.terminal[s]
-
             action_prob, value = self.network(self.game.tensor(state).unsqueeze(0).permute(0, 3, 1, 2).to(torch.float32).to(self.device))
             action_prob, value = action_prob.detach().cpu(), value.item()
 
@@ -65,7 +58,7 @@ class MCTS:
             self.P[s] = valid_moves * action_prob
 
             if self.P[s].sum() == 0:
-                print("[WARNING] zero probability assigned to valid moves.")
+                print("[WARNING] zero probability assigned to valid moves ({} valid).".format(valid_moves.sum()))
                 self.P[s] = valid_moves.reshape(1, -1)
 
             self.P[s] = self.P[s] / self.P[s].sum()
@@ -88,6 +81,8 @@ class MCTS:
                     curr_max = dist[:,i]
                     action = i
 
+            current_player = state.current_player()
+
             try:
                 n_state = self.game.move(state, action)
             except:
@@ -96,8 +91,15 @@ class MCTS:
                 n_state = self.game.move(state, action)
 
             n_state = self.game.flip_board(n_state)
+            n_s = self.game.to_string(n_state, player=1-current_player)
 
-            v = self.search(n_state)
+            if n_s in self.terminal:
+                v = self.terminal[n_s]
+            elif self.game.ended(n_state):
+                self.terminal[n_s] = self.game.reward(n_state, player=current_player)
+                v = -self.terminal[n_s]
+            else:
+                v = self.search(n_state)
 
             if (s, action) in self.Q:
                 self.Q[(s, action)] = (self.Q[(s, action)] * self.N[(s, action)] + v) / (self.N[(s, action)] + 1)

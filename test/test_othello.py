@@ -86,7 +86,7 @@ class TestOthello8:
             assert valid_moves[move]
             board = game.move(board, move)
             assert not game.ended(board)
-            assert game.reward(board) == 0
+            assert game.reward(board, curr_player) == 0
 
             if curr_player == 0:
                 print("--------")
@@ -100,9 +100,12 @@ class TestOthello8:
         
         assert curr_player == 1
         board = game.move(board, moves[-1])
-        reward = game.reward(board)
+        board = game.flip_board(board)
+        curr_player = 1 - curr_player
         assert game.ended(board)
-        assert reward == -1
+
+        reward = game.reward(board, player=0) # 1.0, [33, 31]
+        assert reward == 1
 
     def test_sequence_2(self, game):
         board = game.reset()
@@ -114,14 +117,18 @@ class TestOthello8:
 
         curr_player = 0
         for move in moves[:-1]:
+            game.display(board, player=curr_player)
+            print(f"MOVE: {move}")
+
             valid_moves = game.valid_moves(board)
             assert valid_moves[move]
+
             board = game.move(board, move)
             assert not game.ended(board)
-            assert game.reward(board) == 0
+            assert game.reward(board, curr_player) == 0
 
             print("--------")
-            game.display(board, player=curr_player)
+            # game.display(board, player=curr_player)
             
             board = game.flip_board(board)
             curr_player = 1 - curr_player
@@ -130,7 +137,7 @@ class TestOthello8:
         board = game.move(board, moves[-1])
         print("--------")
         game.display(board, player=curr_player)
-        reward = game.reward(board)
+        reward = game.reward(board, 0)
         assert game.ended(board)
         assert reward == 1
 
